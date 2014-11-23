@@ -1,0 +1,72 @@
+#include Makevars.common
+REDDIR=dense_hodlr
+REDSRCDIR=$(REDDIR)/
+
+RCPPPATH=`$(R_HOME)/bin/Rscript -e "Rcpp:::CxxFlags()"`
+RCPPEIGENPATH=`$(R_HOME)/bin/Rscript -e "Rcpp:::CxxFlags()" |sed 's/Rcpp/RcppEigen/'`
+
+PKG_CXXFLAGS +=-I.
+PKG_CXXFLAGS +=-I$(REDSRCDIR)
+PKG_CXXFLAGS +=$(RCPPPATH)
+PKG_CXXFLAGS +=$(RCPPEIGENPATH)
+
+PKG_LIBS += -lz
+PKG_LIBS +=-L.
+PKG_LIBS += -lHODLRSolver
+PKG_LIBS += `$(R_HOME)/bin/Rscript -e "Rcpp:::LdFlags()"`
+
+PROG=rhodlrwrap.so
+
+#ifeq "$(UNAME_S)" "Darwin"
+ifeq "$(R_ARCH)" "/x86_64"
+ARCHOPT=-arch $(R_ARCH:/%=%)
+endif
+
+ifeq "$(R_ARCH)" "/i386"
+ARCHOPT=-arch $(R_ARCH:/%=%)
+endif
+
+all:$(PROG)
+
+HODLR_Matrix.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/HODLR_Matrix.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+HODLR_Tree.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/HODLR_Tree.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+lowRank.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/lowRank.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+recLU_FactorTree.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/recLU_FactorTree.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+user_IndexTree.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/user_IndexTree.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+kernel.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/kernel.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+matrixIO.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/matrixIO.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+helperFunctions.o:
+	@echo $(R_ARCH)
+	g++ $(ARCHOPT) $(REDSRCDIR)/helperFunctions.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+
+libHODLRSolver.a:helperFunctions.o matrixIO.o matrixIO.o HODLR_Matrix.o HODLR_Tree.o lowRank.o recLU_FactorTree.o user_IndexTree.o kernel.o
+	ar r $@ helperFunctions.o matrixIO.o HODLR_Matrix.o HODLR_Tree.o lowRank.o recLU_FactorTree.o user_IndexTree.o kernel.o
+
+
+$(PROG):rhodlrwrap.cpp libHODLRSolver.a
+	@echo	$(R_PACKAGE_DIR)
+	@echo	lib$(R_ARCH)
+
+clean:
+	rm *.o *.a

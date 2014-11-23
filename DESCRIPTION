@@ -1,0 +1,13 @@
+Package: RHODLR
+Type: Package
+Title: HODLR-based matrix solutions.
+Version: 0.0.0
+Date: 2014-11-22
+Author: R interface code by Brian B. Avants
+  Original C++ code by AmirHossein Aminfar.
+Maintainer: Brian B. Avants <stnava@gmail.com>
+URL: stnava.github.io
+Description: Computes HODLR decompositions e.g. SVD.
+License: file LICENSE
+Imports: Rcpp (>= 0.11.3), RcppEigen (>= 0.3.2.2.0)
+LinkingTo: Rcpp, RcppEigen
