@@ -65,3 +65,20 @@ BEGIN_RCPP
     return __sexp_result;
 END_RCPP
 }
+
+
+// rcppeigen_matinv
+Eigen::MatrixXd rcppeigen_matinv(const Eigen::MatrixXd& x);
+RcppExport SEXP RHODLR_rcppeigen_matinv(SEXP xSEXP) {
+  BEGIN_RCPP
+  SEXP __sexp_result;
+  {
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type x(xSEXP );
+    Eigen::MatrixXd  __result = rcppeigen_matinv(x);
+    PROTECT(__sexp_result = Rcpp::wrap(__result));
+  }
+  UNPROTECT(1);
+  return __sexp_result;
+  END_RCPP
+}

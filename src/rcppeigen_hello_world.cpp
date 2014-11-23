@@ -18,12 +18,12 @@
 Eigen::MatrixXd rcppeigen_hello_world() {
     Eigen::MatrixXd m1 = Eigen::MatrixXd::Identity(3, 3);
     Eigen::MatrixXd m2 = Eigen::MatrixXd::Random(3, 3);
-	                     
+
     return m1 + 3 * (m1 + m2);
 }
 
 
-// another simple example: outer product of a vector, 
+// another simple example: outer product of a vector,
 // returning a matrix
 //
 // [[Rcpp::export]]
@@ -48,4 +48,14 @@ Rcpp::List rcppeigen_bothproducts(const Eigen::VectorXd & x) {
     double          ip = x.transpose() * x;
     return Rcpp::List::create(Rcpp::Named("outer")=op,
                               Rcpp::Named("inner")=ip);
+}
+
+
+// another simple example: invert a matrix,
+// returning a matrix
+//
+// [[Rcpp::export]]
+Eigen::MatrixXd rcppeigen_matinv(const Eigen::MatrixXd & x) {
+  Eigen::MatrixXd Xinv(x.inverse());
+  return Xinv;
 }

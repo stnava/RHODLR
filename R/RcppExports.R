@@ -17,3 +17,14 @@ rcppeigen_bothproducts <- function(x) {
     .Call('RHODLR_rcppeigen_bothproducts', PACKAGE = 'RHODLR', x)
 }
 
+rcppeigen_matinv <- function(x) {
+  .Call('RHODLR_rcppeigen_matinv', PACKAGE = 'RHODLR', x)
+}
+
+getEigenValues <- function(x) {
+  .Call('getEigenValues', PACKAGE = 'RHODLR', x)
+}
+
+hodlrwrap <- function(x,y) {
+  .Call('hodlrwrap', PACKAGE = 'RHODLR', x,y)
+}

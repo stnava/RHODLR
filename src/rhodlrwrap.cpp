@@ -18,25 +18,16 @@ using Eigen::VectorXd;                  // variable size vector, double precisio
 using Eigen::SelfAdjointEigenSolver;    // one of the eigenvalue solvers
 
 // [[Rcpp::export]]
-VectorXd getEigenValues(Map<MatrixXd> M) {
-    SelfAdjointEigenSolver<MatrixXd> es(M);
-    return es.eigenvalues();
+RcppExport SEXP getEigenValues(SEXP AA) {
+  const Eigen::MatrixXd A( as< Eigen::MatrixXd >(AA) );
+  SelfAdjointEigenSolver<MatrixXd> es(A);
+  return  Rcpp::wrap(es.eigenvalues());
 }
 
-RcppExport SEXP C_spdinv_eigen ( SEXP X_ )
+RcppExport SEXP hodlrwrap(SEXP X,SEXP y)
   {
-  using Eigen::Map;
-  using Eigen::MatrixXd;
-  typedef Eigen::Map<Eigen::MatrixXd> MapMatd;
-  const MapMatd X(Rcpp::as<MapMatd>(X_));
-  const MatrixXd Xinv(X.inverse());
-  return(Rcpp::wrap(Xinv));
-  }
-
-SEXP hodlrwrap(SEXP AA,SEXP nn)
-  {
-  Eigen::MatrixXd denseMatrix;
-  Eigen::VectorXd RHS;
+  Eigen::MatrixXd denseMatrix( as< Eigen::MatrixXd >(X) );
+  Eigen::VectorXd RHS( as< Eigen::VectorXd >(y) );
   HODLR_Matrix denseHODLR(denseMatrix, 10 );
   double tol = 10.0;
   denseHODLR.set_LRTolerance(tol);
