@@ -26,8 +26,8 @@ RcppExport SEXP getEigenValues(SEXP AA) {
 
 RcppExport SEXP hodlrwrap(SEXP X,SEXP y)
   {
-  Eigen::MatrixXd denseMatrix( as< Eigen::MatrixXd >(X) );
-  Eigen::VectorXd RHS( as< Eigen::VectorXd >(y) );
+  Eigen::MatrixXd denseMatrix( as<Map<MatrixXd> >(X) );
+  Eigen::VectorXd RHS( as<Map<VectorXd> >(y) );
   HODLR_Matrix denseHODLR(denseMatrix, 10 );
   double tol = 10.0;
   denseHODLR.set_LRTolerance(tol);
