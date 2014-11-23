@@ -44,10 +44,10 @@ double logRKernel(const double r){
 std::vector<int> createUniqueRndIdx(const int min, const int max,const int n){
   assert(max > min);
   int seqVecSize = max - min + 1;
-  assert(n <= seqVecSize);
+  assert(n <= seqVecSize); 
   std::vector<int> idxVec = createSequentialVec(min,seqVecSize);
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  //std::shuffle(idxVec.begin(),idxVec.end(),std::default_random_engine(seed));
+  // std::shuffle(idxVec.begin(),idxVec.end(),std::default_random_engine(seed));
   std::vector<int> extendIdxVec = std::vector<int>(idxVec.begin(),idxVec.begin() + n);
   std::sort(extendIdxVec.begin(),extendIdxVec.end());
   return extendIdxVec;
