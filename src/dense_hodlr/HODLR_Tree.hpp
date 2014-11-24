@@ -1,12 +1,18 @@
 #ifndef HODLR_TREE_HPP
 #define HODLR_TREE_HPP
 
-#include <string>
-#include <iostream>
-#include <vector>
+// C++ Dependencies
 #include "assert.h"
-#include "user_IndexTree.hpp"
+#include <iostream>
+#include <string>
+#include <vector>
+
+// External Dependencies
 #include "Eigen/Dense"
+
+// Custom Dependencies
+#include "user_IndexTree.hpp"
+#include "perturbI.hpp"
 
 class HODLR_Tree{
 
@@ -25,19 +31,28 @@ public:
     int bottOffDiag_minRank;
     int topOffDiag_maxRank;
     int bottOffDiag_maxRank;
+    int topOffDiagRank;
+    int bottOffDiagRank;
+
     bool isLeaf;
+
     std::string LR_Method;
+
     Eigen::MatrixXd topOffDiagU;
     Eigen::MatrixXd topOffDiagV;
     Eigen::MatrixXd bottOffDiagU;
     Eigen::MatrixXd bottOffDiagV;
     Eigen::MatrixXd leafMatrix;
-    int topOffDiagRank;
-    int bottOffDiagRank;
+    Eigen::MatrixXd topOffDiagU_SM;
+    Eigen::MatrixXd bottOffDiagU_SM;
+   
     std::vector<int> topOffDiagRowIdx;
     std::vector<int> topOffDiagColIdx;
     std::vector<int> bottOffDiagRowIdx;
     std::vector<int> bottOffDiagColIdx;
+
+    Eigen::PartialPivLU<Eigen::MatrixXd> leafLU;
+    perturbI nodePerturbI;
   };
   
   HODLR_Tree();

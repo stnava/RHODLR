@@ -8,6 +8,9 @@ void HODLR_Matrix::setDefaultValues(){
   recLU_FactorizationTime      = 0;
   recLU_SolveTime              = 0;
   recLU_TotalTime              = 0;
+  recSM_FactorizationTime      = 0;
+  recSM_SolveTime              = 0;
+  recSM_TotalTime              = 0;
   LR_ComputationTime           = 0;
   extendedSp_Size              = 0;
   extendedSp_AssemblyTime      = 0;
@@ -23,6 +26,7 @@ void HODLR_Matrix::setDefaultValues(){
 
   LRStoredInTree         = false;
   recLU_Factorized       = false;
+  recSM_Factorized       = false;
   assembled_ExtendedSp   = false;
   saveExtendedSp_Matrix  = false;
   freeMatrixMemory       = false;
@@ -520,7 +524,6 @@ void HODLR_Matrix::storeLRinTree(HODLR_Tree::node* HODLR_Root){
 
 Eigen::MatrixXd HODLR_Matrix::createExactHODLR(const int rank,int input_MatrixSize,const int input_SizeThreshold){
   assert(indexTree.rootNode == NULL);
-  //assert(rank > 0);
   Eigen::MatrixXd result = Eigen::MatrixXd::Zero(input_MatrixSize,input_MatrixSize);
   isSquareMatrix = true;  // Currently unable to build trees for non squared matrices
   matrixSize    = input_MatrixSize;
@@ -593,11 +596,114 @@ void HODLR_Matrix::createExactHODLR(HODLR_Tree::node* HODLR_Root,const int rank,
 
 
 void HODLR_Matrix::recLU_Factorize(){
-  recLUfactorTree.rootNode = new recLU_FactorTree::node;
-  (recLUfactorTree.rootNode)->isLeaf = false; 
-  Eigen::VectorXd dummyF = Eigen::VectorXd::LinSpaced(Eigen::Sequential,matrixSize,-2,2); 
-  Eigen::MatrixXd dummyX = recLU_Factorize(dummyF, indexTree.rootNode, recLUfactorTree.rootNode);
+   if (recLU_Factorized == false){
+    double startTime = clock();
+    recLUfactorTree.rootNode = new recLU_FactorTree::node;
+    (recLUfactorTree.rootNode)->isLeaf = false; 
+    Eigen::VectorXd dummyF = Eigen::VectorXd::LinSpaced(Eigen::Sequential,matrixSize,-2,2); 
+    Eigen::MatrixXd dummyX = recLU_Factorize(dummyF, indexTree.rootNode, recLUfactorTree.rootNode);
+    double endTime = clock();
+    recLU_FactorizationTime = (endTime-startTime)/CLOCKS_PER_SEC;
+    recLU_Factorized = true;
+  }
+
 }
+
+void HODLR_Matrix::recSM_Factorize(){
+  if (recSM_Factorized == false){
+    double startTime = clock();
+    int tree_numLevels = indexTree.get_numLevels();
+    for (int i = tree_numLevels - 1; i > 0; i--){
+      std::vector<HODLR_Tree::node*> left,right; 
+      recSM_Factorize(indexTree.rootNode,left,right,i);
+    }
+    HODLR_Tree::node* HODLR_Root = indexTree.rootNode;
+    HODLR_Root->nodePerturbI = perturbI(&(HODLR_Root->topOffDiagU_SM),&(HODLR_Root->topOffDiagV),&(HODLR_Root->bottOffDiagU_SM),&(HODLR_Root->bottOffDiagV));
+    double endTime = clock();
+    recSM_FactorizationTime = (endTime-startTime)/CLOCKS_PER_SEC;
+    recSM_Factorized = true;
+  }
+}
+
+
+void HODLR_Matrix::recSM_Factorize(HODLR_Tree::node* HODLR_Root,std::vector<HODLR_Tree::node*> &leftChildren, std::vector<HODLR_Tree::node*> &rightChildren,int desLevel){
+
+  if (HODLR_Root->left->currLevel == desLevel){
+    if (HODLR_Root->left->isLeaf)
+      HODLR_Root->left->leafLU = Eigen::PartialPivLU<Eigen::MatrixXd>(HODLR_Root->left->leafMatrix);
+    leftChildren.push_back(HODLR_Root->left);
+  }else if (!HODLR_Root->left->isLeaf){
+    std::vector<HODLR_Tree::node*> left,right;
+    recSM_Factorize(HODLR_Root->left,left,right,desLevel);
+    left.insert(left.end(),right.begin(),right.end());
+    leftChildren = left;
+  }
+  
+  if (HODLR_Root->right->currLevel == desLevel){
+    if (HODLR_Root->right->isLeaf)
+      HODLR_Root->right->leafLU = Eigen::PartialPivLU<Eigen::MatrixXd>(HODLR_Root->right->leafMatrix);
+    rightChildren.push_back(HODLR_Root->right);
+  }else if (!HODLR_Root->right->isLeaf){
+    std::vector<HODLR_Tree::node*> left,right; 
+    recSM_Factorize(HODLR_Root->right,left,right,desLevel);
+    right.insert(right.end(),left.begin(),left.end());
+    rightChildren = right;
+  }
+  
+  if (HODLR_Root->topOffDiagU_SM.rows() == 0)
+    HODLR_Root->topOffDiagU_SM = HODLR_Root->topOffDiagU;
+  
+  if (HODLR_Root->bottOffDiagU_SM.rows() == 0)
+    HODLR_Root->bottOffDiagU_SM = HODLR_Root->bottOffDiagU;
+  
+  for (unsigned int i = 0; i < leftChildren.size(); i++){
+    HODLR_Tree::node* currChild = leftChildren[i];
+    int currChildSize   = currChild->max_i - currChild->min_i + 1;
+    int minIdx = currChild->min_i - HODLR_Root->min_i;
+    Eigen::MatrixXd RHS = HODLR_Root->topOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->topOffDiagU_SM.cols());
+    if (currChild->isLeaf){
+      HODLR_Root->topOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->topOffDiagU_SM.cols()) = currChild->leafLU.solve(RHS);
+    }else{
+      currChild->nodePerturbI = perturbI(&(currChild->topOffDiagU_SM),&(currChild->topOffDiagV),&(currChild->bottOffDiagU_SM),&(currChild->bottOffDiagV));
+      HODLR_Root->topOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->topOffDiagU_SM.cols()) = currChild->nodePerturbI.solve(RHS);
+    }
+  }
+  
+  for (unsigned int i = 0; i < rightChildren.size(); i++){
+    HODLR_Tree::node* currChild = rightChildren[i];
+    int currChildSize   = currChild->max_i - currChild->min_i + 1;
+    int minIdx = currChild->min_i - HODLR_Root->splitIndex_i - 1;
+    Eigen::MatrixXd RHS = HODLR_Root->bottOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->bottOffDiagU_SM.cols());
+    if (currChild->isLeaf){
+      HODLR_Root->bottOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->bottOffDiagU_SM.cols()) = currChild->leafLU.solve(RHS);
+    }else{
+      currChild->nodePerturbI = perturbI(&(currChild->topOffDiagU_SM),&(currChild->topOffDiagV),&(currChild->bottOffDiagU_SM),&(currChild->bottOffDiagV));
+      HODLR_Root->bottOffDiagU_SM.block(minIdx,0,currChildSize,HODLR_Root->bottOffDiagU_SM.cols()) = currChild->nodePerturbI.solve(RHS);
+    }
+  }
+}
+
+void HODLR_Matrix::recSM_Solve(HODLR_Tree::node* HODLR_Root,Eigen::MatrixXd &RHS){
+  
+  int currBlockSize =  HODLR_Root->max_i - HODLR_Root->min_i + 1;
+  
+  if (HODLR_Root->isLeaf == true){
+    Eigen::MatrixXd currRHS = RHS.block(HODLR_Root->min_i,0,currBlockSize,RHS.cols());
+    RHS.block(HODLR_Root->min_i,0,currBlockSize,RHS.cols()) = HODLR_Root->leafLU.solve(currRHS);
+    return;
+  }
+  
+  recSM_Solve(HODLR_Root->left,RHS);
+  recSM_Solve(HODLR_Root->right,RHS);
+  
+  Eigen::MatrixXd currRHS = RHS.block(HODLR_Root->min_i,0,currBlockSize,RHS.cols());
+  RHS.block(HODLR_Root->min_i,0,currBlockSize,RHS.cols()) = HODLR_Root->nodePerturbI.solve(currRHS);
+  
+}
+
+
+
+
 
 Eigen::MatrixXd HODLR_Matrix::recLU_Factorize(const Eigen::MatrixXd & input_RHS,const HODLR_Tree::node* HODLR_Root, recLU_FactorTree::node* factorRoot){
 
@@ -806,6 +912,7 @@ Eigen::MatrixXd HODLR_Matrix::recLU_Solve(const Eigen::MatrixXd & input_RHS){
   
   assert(isSquareMatrix == true);
   assert(input_RHS.rows() == matrixSize);
+
   if (indexTree.rootNode == NULL){
     indexTree.set_sizeThreshold(sizeThreshold);
     indexTree.createDefaultTree(matrixSize);
@@ -813,18 +920,10 @@ Eigen::MatrixXd HODLR_Matrix::recLU_Solve(const Eigen::MatrixXd & input_RHS){
   }
 
   storeLRinTree();
-
-  if (recLU_Factorized == false){
-    double startTime = clock();
-    recLU_Factorize();
-    double endTime = clock();
-    recLU_FactorizationTime = (endTime-startTime)/CLOCKS_PER_SEC;
-    recLU_Factorized = true;
-  }
+  recLU_Factorize();
   
-  Eigen::MatrixXd solution;
   double startTime = clock();
-  solution = recLU_Solve(input_RHS,indexTree.rootNode,recLUfactorTree.rootNode);
+  Eigen::MatrixXd solution = recLU_Solve(input_RHS,indexTree.rootNode,recLUfactorTree.rootNode);
   double endTime = clock();
   recLU_SolveTime = (endTime-startTime)/CLOCKS_PER_SEC;
   recLU_TotalTime = recLU_FactorizationTime + recLU_SolveTime + LR_ComputationTime;
@@ -839,10 +938,8 @@ Eigen::MatrixXd HODLR_Matrix::recLU_Solve(const Eigen::MatrixXd & input_RHS){
     if (matrixDataAvail == true)
       std::cout<<"Residual l2 Relative Error       = "<<((matrixData * solution) - input_RHS).norm()/input_RHS.norm()<<std::endl;
     else if (kernelDataAvail == true)
-      std::cout<<"Residual l2 Relative Error       = "<<((kernelMatrixData * solution) - input_RHS).norm()/input_RHS.norm()<<std::endl;
-    
-  }
-  
+      std::cout<<"Residual l2 Relative Error       = "<<((kernelMatrixData * solution) - input_RHS).norm()/input_RHS.norm()<<std::endl;   
+  } 
 
   return solution;
 
@@ -855,15 +952,47 @@ void HODLR_Matrix::recLU_Compute(){
     initializeInfoVecotrs(indexTree.get_numLevels());
   }
   storeLRinTree();
-  if (recLU_Factorized == false){
-    double startTime = clock();
-    recLU_Factorize();
-    double endTime = clock();
-    recLU_FactorizationTime = (endTime-startTime)/CLOCKS_PER_SEC;
-    recLU_Factorized = true;
-  }
+  recLU_Factorize();
+ 
 }
 
+Eigen::MatrixXd HODLR_Matrix::recSM_Solve(const Eigen::MatrixXd & input_RHS){
+  assert(isSquareMatrix == true);
+  assert(input_RHS.rows() == matrixSize);
+  
+  if (indexTree.rootNode == NULL){
+    indexTree.set_sizeThreshold(sizeThreshold);
+    indexTree.createDefaultTree(matrixSize);
+    initializeInfoVecotrs(indexTree.get_numLevels());
+  }
+
+  storeLRinTree();
+  recSM_Factorize();
+  
+  Eigen::MatrixXd solution = input_RHS;
+  double startTime = clock();
+  recSM_Solve(indexTree.rootNode,solution);
+  double endTime = clock();
+  recSM_SolveTime = (endTime-startTime)/CLOCKS_PER_SEC;
+  recSM_TotalTime = recSM_FactorizationTime + recSM_SolveTime + LR_ComputationTime;
+  
+  if (printResultInfo){
+    std::cout<<"**************************************************"<<std::endl;
+    std::cout<<"Solver Type                      = recSM"<<std::endl;
+    std::cout<<"Low-Rank Computation Time        = "<<LR_ComputationTime<<" seconds"<<std::endl;
+    std::cout<<"Factorization Time               = "<<recSM_FactorizationTime<<" seconds"<<std::endl;
+    std::cout<<"Solve Time                       = "<<recSM_SolveTime<<" seconds"<<std::endl; 
+    std::cout<<"Total Solve Time                 = "<<recSM_TotalTime<<" seconds"<<std::endl;
+    std::cout<<"LR Tolerance                     = "<<LR_Tolerance<<std::endl;
+    if (matrixDataAvail == true)
+      std::cout<<"Residual l2 Relative Error       = "<<((matrixData * solution) - input_RHS).norm()/input_RHS.norm()<<std::endl;
+    else if (kernelDataAvail == true)
+      std::cout<<"Residual l2 Relative Error       = "<<((kernelMatrixData * solution) - input_RHS).norm()/input_RHS.norm()<<std::endl;   
+  } 
+  
+  return solution;
+
+}
 
 void HODLR_Matrix::findNodesAtLevel(HODLR_Tree::node* HODLR_Root, const int level,std::vector<HODLR_Tree::node*> & outputVector){
 
@@ -1686,25 +1815,20 @@ void HODLR_Matrix::calcDeterminant(){
   if (calculatedDet == false){
     determinant_ = 1;
     logAbsDeterminant_ = 0;
+    recSM_Factorize();
     calcDeterminant(indexTree.rootNode);
   }
 }
 
 void HODLR_Matrix::calcDeterminant(HODLR_Tree::node* HODLR_Root){
-  /*
+  
   if (HODLR_Root->isLeaf == true){
     Eigen::PartialPivLU<Eigen::MatrixXd> luFact(HODLR_Root->leafMatrix);
-   
     Eigen::MatrixXd luMatrix = luFact.matrixLU();
-    //
-    double x = 0.0;
-    //
     for (int i = 0; i < luMatrix.rows(); i++){
       determinant_ *= luMatrix(i,i);
       logAbsDeterminant_ += log(fabs(luMatrix(i,i)));
-      x += log(fabs(luMatrix(i,i)));
     }
-    std::cout<<x<<std::endl;
     return;
   }
   
@@ -1715,22 +1839,13 @@ void HODLR_Matrix::calcDeterminant(HODLR_Tree::node* HODLR_Root){
   
   int rankTotal = HODLR_Root->topOffDiagRank + HODLR_Root->bottOffDiagRank;
   int blockSize = numRows_TopOffDiag + numRows_BottOffDiag;
- 
-  //std::cout<<blockSize<<std::endl;
-  std::cout<<HODLR_Root->splitIndex_i<< " "<<HODLR_Root->splitIndex_j<<std::endl;
+  
   Eigen::MatrixXd U  = Eigen::MatrixXd::Zero(blockSize,rankTotal);
   Eigen::MatrixXd VT = Eigen::MatrixXd::Zero(rankTotal,blockSize);
   
-  Eigen::MatrixXd actualMatrix = Eigen::MatrixXd::Identity(blockSize,blockSize);
-  Eigen::MatrixXd actualMatrixD = Eigen::MatrixXd::Zero(blockSize,blockSize);
-  actualMatrix.topRightCorner(numRows_TopOffDiag,numCols_TopOffDiag) = HODLR_Root->topOffDiagU*HODLR_Root->topOffDiagV.transpose();
-  actualMatrix.bottomLeftCorner(numRows_BottOffDiag,numCols_BottOffDiag) = HODLR_Root->bottOffDiagU*HODLR_Root->bottOffDiagV.transpose();
 
-  actualMatrixD.topLeftCorner(1500,1500) = matrixData.topLeftCorner(1500,1500);
-  actualMatrixD.bottomRightCorner(1500,1500) = matrixData.bottomRightCorner(1500,1500);
-
-  U.topLeftCorner(numRows_TopOffDiag,HODLR_Root->topOffDiagRank) = HODLR_Root->topOffDiagU;
-  U.bottomRightCorner(numRows_BottOffDiag,HODLR_Root->bottOffDiagRank) = HODLR_Root->bottOffDiagU;
+  U.topLeftCorner(numRows_TopOffDiag,HODLR_Root->topOffDiagRank) = HODLR_Root->topOffDiagU_SM;
+  U.bottomRightCorner(numRows_BottOffDiag,HODLR_Root->bottOffDiagRank) = HODLR_Root->bottOffDiagU_SM;
   VT.topRightCorner(HODLR_Root->topOffDiagRank,numCols_TopOffDiag) = HODLR_Root->topOffDiagV.transpose();
   VT.bottomLeftCorner(HODLR_Root->bottOffDiagRank,numCols_BottOffDiag) = HODLR_Root->bottOffDiagV.transpose();
   
@@ -1738,17 +1853,13 @@ void HODLR_Matrix::calcDeterminant(HODLR_Tree::node* HODLR_Root){
   Eigen::PartialPivLU<Eigen::MatrixXd> luFact(detMatrix);
   Eigen::MatrixXd luMatrix = luFact.matrixLU();
   
-  Eigen::HouseholderQR<Eigen::MatrixXd> qr(actualMatrixD);
-  double x = 0;
   for (int i = 0; i < rankTotal; i++){
     determinant_ *= luMatrix(i,i);
     logAbsDeterminant_ += log(fabs(luMatrix(i,i)));
-    x += log(std::abs(luMatrix(i,i)));
   }
-  std::cout<<x<<" "<<qr.logAbsDeterminant()<<std::endl;
  
   calcDeterminant(HODLR_Root->left);
   calcDeterminant(HODLR_Root->right);
-  */
+  
 }
 

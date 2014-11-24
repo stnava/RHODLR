@@ -15,14 +15,14 @@
 #include <Eigen/Sparse>
 
 //Custom Dependencies
-#include "HODLR_Tree.hpp"
 #include "helperFunctions.hpp"
-#include "user_IndexTree.hpp"
-#include "recLU_FactorTree.hpp"
+#include "HODLR_Tree.hpp"
+#include "kernel.hpp"
 #include "lowRank.hpp"
 #include "matrixIO.hpp"
-#include "kernel.hpp"
-
+#include "perturbI.hpp"
+#include "user_IndexTree.hpp"
+#include "recLU_FactorTree.hpp"
 
 /**
  * \author Amirhossein Aminfar
@@ -31,7 +31,7 @@
 class HODLR_Matrix{
 
 public:
-  
+ 
   bool printLevelRankInfo;
   bool printLevelAccuracy;
   bool printLevelInfo;
@@ -160,6 +160,8 @@ public:
   
   /************************************* Solve Methods **********************************/
   Eigen::MatrixXd recLU_Solve(const Eigen::MatrixXd & input_RHS);
+  Eigen::MatrixXd recSM_Solve(const Eigen::MatrixXd & input_RHS);
+
   void recLU_Compute();
   Eigen::MatrixXd extendedSp_Solve(const Eigen::MatrixXd & input_RHS);
   Eigen::MatrixXd iterative_Solve(const Eigen::MatrixXd & input_RHS, const int maxIterations, const double stop_tolerance,const double init_LRTolerance,const std::string input_LR_Method, const std::string directSolve_Method);
@@ -237,6 +239,10 @@ private:
   double recLU_FactorizationTime;
   double recLU_SolveTime;
   double recLU_TotalTime;
+  double recSM_FactorizationTime;
+  double recSM_SolveTime;
+  double recSM_TotalTime;
+
   double LR_ComputationTime;
   double extendedSp_AssemblyTime;
   double extendedSp_FactorizationTime;
@@ -256,6 +262,7 @@ private:
   
   bool LRStoredInTree;
   bool recLU_Factorized;
+  bool recSM_Factorized;
   bool assembled_ExtendedSp;
   bool saveExtendedSp_Matrix;
   bool freeMatrixMemory;
@@ -295,9 +302,13 @@ private:
  
   void storeLRinTree(HODLR_Tree::node* HODLR_Root);
   void recLU_Factorize();
+  void recSM_Factorize();
   Eigen::MatrixXd recLU_Factorize(const Eigen::MatrixXd & input_RHS,const HODLR_Tree::node* HODLR_Root, recLU_FactorTree::node* factorRoot);
+  void recSM_Factorize(HODLR_Tree::node* HODLR_Root,std::vector<HODLR_Tree::node*> &leftChildren, std::vector<HODLR_Tree::node*> &rightChildren,int desLevel);
+
   Eigen::MatrixXd recLU_Solve(const Eigen::MatrixXd & input_RHS,const HODLR_Tree::node* HODLR_Root, const recLU_FactorTree::node* factorRoot);
 
+  void recSM_Solve(HODLR_Tree::node* HODLR_Root,Eigen::MatrixXd &RHS);
   /**************************extendedSp Solver Functions***************************/
   void findNodesAtLevel(HODLR_Tree::node* HODLR_Root, const int level, std::vector<HODLR_Tree::node*> & outputVector);
   void findLeafNodes(HODLR_Tree::node* HODLR_Root, std::vector<HODLR_Tree::node*>& outputVector);
