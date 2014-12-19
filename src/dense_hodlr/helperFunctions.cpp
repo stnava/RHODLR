@@ -44,7 +44,7 @@ double logRKernel(const double r){
 std::vector<int> createUniqueRndIdx(const int min, const int max,const int n){
   assert(max > min);
   int seqVecSize = max - min + 1;
-  assert(n <= seqVecSize); 
+  assert(n <= seqVecSize);
   std::vector<int> idxVec = createSequentialVec(min,seqVecSize);
   unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
   // std::shuffle(idxVec.begin(),idxVec.end(),std::default_random_engine(seed));
@@ -97,8 +97,8 @@ Eigen::MatrixXd makeMatrixFrom1DInterval(const std::vector<double> rowPts,const 
  * maxColpt : Upper bound of the 1D interval for the row points.
  * numRows : Number of rows (row points).
  * numCols : Number of columns (column points).
- * diagValue : The diagonal entry value of the dense matrix.
-`* kernel : Pointer to the kernel function.
+ * diagValue : The diagonal entry value of the dense matrix.   
+`* kernel : Pointer to the kernel function.  
 */
 Eigen::MatrixXd makeMatrix1DUniformPts(const int minRowPt, const int maxRowPt, const int minColPt, const int maxColPt, const int numRows, const int numCols, const double diagValue, double (*kernel)(const double)){
   assert((maxRowPt > minRowPt) && (maxColPt > minColPt));
@@ -136,9 +136,9 @@ Eigen::MatrixXd makeMatrix1DUniformPts(const int minRowPt, const int maxRowPt, c
  * diagValue : The diagonal entry value of the dense matrix.
  * exactSoln : The test right hand side of the linear system.
  * outputFileName : Path of the output file.
- * kernel : Pointer to the kernel function.
+ * kernel : Pointer to the kernel function. 
  * solverType : Type of HODLR solver. Default is recLU.
- */
+ */ 
 void testACASolverConv1DUnifromPts(const double intervalMin,const double intervalMax, const int numPts, const double diagValue, Eigen::VectorXd exactSoln, std::string outputFileName, double (*kernel)(const double r),std::string solverType){
   assert(intervalMax > intervalMin);
   assert(numPts > 0);
@@ -146,7 +146,7 @@ void testACASolverConv1DUnifromPts(const double intervalMin,const double interva
   int minTol = -5;
   int maxTol = -10;
   int sizeThreshold = 30;
-
+  
   Eigen::MatrixXd denseMatrix = makeMatrix1DUniformPts (intervalMin, intervalMax, intervalMin, intervalMax, numPts, numPts, diagValue, kernel);
   Eigen::VectorXd RHS = denseMatrix * exactSoln;
   HODLR_Matrix denseHODLR(denseMatrix, sizeThreshold);
@@ -177,7 +177,7 @@ void testACASolverConv1DUnifromPts(const double intervalMin,const double interva
  * diagValue : The diagonal entry value of the dense matrix.
  * LR_Tolerance : The ACA tolerance of the HODLR solver.
  * outputFileName : Path of the output file.
- * kernel : Pointer to the kernel function.
+ * kernel : Pointer to the kernel function. 
  * solverType : Type of HODLR solver. Default is recLU.
  */
 void testACASolverSpeed1DUniformPts(const double intervalMin, const double intervalMax,const double diagValue,const double LR_Tolerance, std::string outputFileName, double (*kernel)(const double), std::string solverType){
@@ -206,7 +206,7 @@ void testACASolverSpeed1DUniformPts(const double intervalMin, const double inter
     Eigen::MatrixXd denseMatrix = makeMatrix1DUniformPts (intervalMin, intervalMax, intervalMin, intervalMax, matrixSize, matrixSize, diagValue, kernel);
     Eigen::VectorXd exactSoln = Eigen::VectorXd::LinSpaced(Eigen::Sequential,matrixSize,-2,2);
     Eigen::VectorXd RHS = denseMatrix * exactSoln;
-
+   
     double sum_Factorization = 0;
     double sum_LR = 0;
     double sum_Solve = 0;
@@ -220,7 +220,7 @@ void testACASolverSpeed1DUniformPts(const double intervalMin, const double inter
       HODLR_Matrix denseHODLR(denseMatrix , sizeThreshold);
       denseHODLR.set_LRTolerance(LR_Tolerance);
       Eigen::VectorXd solverSoln;
-
+      
       if (solverType == "recLU"){
 	solverSoln = denseHODLR.recLU_Solve(RHS);
 	sum_Factorization += denseHODLR.get_recLU_FactorizationTime();
@@ -236,15 +236,15 @@ void testACASolverSpeed1DUniformPts(const double intervalMin, const double inter
 	sum_Assembly += denseHODLR.get_extendedSp_AssemblyTime();
 	sum_Total += denseHODLR.get_extendedSp_TotalTime();// + denseHODLR.get_LR_ComputationTime() + denseHODLR.get_extendedSp_AssemblyTime() + denseHODLR.get_extendedSp_SolveTime();
       }
-
+      
     }
-
+    
     outputFile_Factorization<<matrixSize<<"       "<<sum_Factorization/numIterations<<std::endl;
     outputFile_LR<<matrixSize<<"       "<<sum_LR/numIterations<<std::endl;
     outputFile_Solve<<matrixSize<<"       "<<sum_Solve/numIterations<<std::endl;
     outputFile_Total<<matrixSize<<"       "<<sum_Total/numIterations<<std::endl;
     if (solverType == "extendedSp")
-      outputFile_Assembly<<matrixSize<<"       "<<sum_Assembly/numIterations<<std::endl;
+      outputFile_Assembly<<matrixSize<<"       "<<sum_Assembly/numIterations<<std::endl; 
   }
 
   outputFile_Total.close();
@@ -253,7 +253,7 @@ void testACASolverSpeed1DUniformPts(const double intervalMin, const double inter
     outputFile_LR.close();
     outputFile_Solve.close();
     if (solverType == "extendedSp")
-      outputFile_Assembly.close();
+      outputFile_Assembly.close(); 
   }
 }
 
@@ -266,7 +266,7 @@ void testACASolverSpeed1DUniformPts(const double intervalMin, const double inter
  * diagValue : The diagonal entry value of the dense matrix.
  * LR_Tolerance : The ACA tolerance of the HODLR solver.
  * outputFileName : Path of the output file.
- * kernel : Pointer to the kernel function.
+ * kernel : Pointer to the kernel function. 
  * matrixSize : Size of the matrix.
  * solverType : Type of HODLR solver. Default is recLU.
  */
@@ -277,11 +277,11 @@ void testACASolverSpeed1DUniformPts_FixedSize(const double intervalMin, const do
 
   std::ofstream outputFile;
   outputFile.open(outputFileName.c_str());
-
+ 
   Eigen::MatrixXd denseMatrix = makeMatrix1DUniformPts (intervalMin, intervalMax, intervalMin, intervalMax, matrixSize, matrixSize, diagValue, kernel);
   Eigen::VectorXd exactSoln = Eigen::VectorXd::LinSpaced(Eigen::Sequential,matrixSize,-2,2);
   Eigen::VectorXd RHS = denseMatrix * exactSoln;
-
+   
   double sum_Factorization = 0;
   double sum_LR = 0;
   double sum_Solve = 0;
@@ -292,7 +292,7 @@ void testACASolverSpeed1DUniformPts_FixedSize(const double intervalMin, const do
     HODLR_Matrix denseHODLR(denseMatrix , sizeThreshold);
     denseHODLR.set_LRTolerance(LR_Tolerance);
     Eigen::VectorXd solverSoln;
-
+    
     if (solverType == "recLU"){
       solverSoln = denseHODLR.recLU_Solve(RHS);
       sum_Factorization += denseHODLR.get_recLU_FactorizationTime();
@@ -309,15 +309,15 @@ void testACASolverSpeed1DUniformPts_FixedSize(const double intervalMin, const do
       sum_Total += denseHODLR.get_extendedSp_TotalTime();// + denseHODLR.get_LR_ComputationTime() + denseHODLR.get_extendedSp_AssemblyTime() + denseHODLR.get_extendedSp_SolveTime();
     }
     denseHODLR.saveSolverInfo(outputFileName + "_DetailTimings_");
-
+    
   }
   outputFile<<"Factorization   "<<"       "<<sum_Factorization/numIterations<<std::endl;
   outputFile<<"LR-Approximation"<<"       "<<sum_LR/numIterations<<std::endl;
   outputFile<<"Solve           "<<"       "<<sum_Solve/numIterations<<std::endl;
   outputFile<<"Total           "<<"       "<<sum_Total/numIterations<<std::endl;
   if (solverType == "extendedSp")
-    outputFile<<"Assembly        "<<"       "<<sum_Assembly/numIterations<<std::endl;
-
+    outputFile<<"Assembly        "<<"       "<<sum_Assembly/numIterations<<std::endl; 
+  
   outputFile.close();
 }
 
@@ -337,7 +337,7 @@ void testSolverSpeed(const std::string inputFilePath,const std::string outputFil
   Eigen::VectorXd exactSoln = Eigen::VectorXd::LinSpaced(Eigen::Sequential,matrixSize,-2,2);
   Eigen::VectorXd inputF = inputMatrix * exactSoln;
   HODLR_Matrix test_HODLR(inputMatrix,sizeThreshold,usrTree);
-
+  
   std::ofstream outputFile_Error;
   std::ofstream outputFile_Speed;
   std::string errorFileName = outputFilePath + "errorVsTolerance";
@@ -417,18 +417,18 @@ void analyzeRank(const std::string inputMatrixFileName,const std::string inputGr
   Eigen::SparseMatrix<double> inputGraph = readMtxIntoSparseMatrix(inputGraphFileName);
   int min_i,min_j,numRows,numCols;
   int matrixSize = inputMatrix.rows();
-  if (mode == "topOffDiag"){
-    int split = matrixSize/2;
+  if (mode == "topOffDiag"){  
+    int split = matrixSize/2; 
     min_i = 0;
     min_j = split + 1;
     numRows = split + 1;
     numCols = matrixSize - split - 1;
-  } else if (mode == "bottOffDiag"){
-    int split = matrixSize/2;
+  } else if (mode == "bottOffDiag"){  
+    int split = matrixSize/2; 
     min_i = split + 1;
     min_j = 0;
     numRows = matrixSize - split - 1;
-    numCols = split + 1;
+    numCols = split + 1; 
   }else{
     min_i   = input_Min_i;
     min_j   = input_Min_j;
@@ -454,15 +454,15 @@ void analyzeRank(const std::string inputMatrixFileName,const std::string inputGr
     boundaryError.push_back(relError);
     PS_Boundary_LowRankApprox(inputMatrix,inputGraph,U,V,min_i,min_j,numRows,numCols,1e-1,currRankComp1,depth);
     relError = (U * V.transpose() - currBlock).norm()/currBlock.norm();
-
+    
     boundaryErrorComp1.push_back(relError);
     PS_Boundary_LowRankApprox(inputMatrix,inputGraph,U,V,min_i,min_j,numRows,numCols,1e-3,currRankComp3,depth);
     relError = (U * V.transpose() - currBlock).norm()/currBlock.norm();
-
+    
     boundaryErrorComp3.push_back(relError);
     PS_Boundary_LowRankApprox(inputMatrix,inputGraph,U,V,min_i,min_j,numRows,numCols,1e-5,currRankComp5,depth);
     relError = (U * V.transpose() - currBlock).norm()/currBlock.norm();
-
+  
     boundaryErrorComp5.push_back(relError);
     depth ++;
   }

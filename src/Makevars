@@ -30,7 +30,7 @@ all:$(PROG)
 
 HODLR_Matrix.o:
 	@echo $(R_ARCH)
-	g++ $(ARCHOPT) $(REDSRCDIR)/HODLR_Matrix.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c
+	g++ $(ARCHOPT) $(REDSRCDIR)/HODLR_Matrix.cpp ${RCPPEIGENPATH} -I$(REDSRCDIR) -fPIC -c  -DNOPASTIX
 
 HODLR_Tree.o:
 	@echo $(R_ARCH)
